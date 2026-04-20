@@ -21,6 +21,7 @@
             <div class="toolbar-group file-actions">
               <button id="openButton" type="button">파일 열기</button>
               <button id="clearButton" type="button" disabled>닫기</button>
+              <button id="historyButton" type="button">기록</button>
             </div>
           </div>
 
@@ -101,10 +102,36 @@
           <aside id="translationPopover" class="translation-popover" aria-live="polite">
             <div class="popover-head">
               <span>번역</span>
-              <button id="closePopoverButton" type="button" aria-label="번역창 닫기">×</button>
+              <div class="popover-actions">
+                <button id="unpinPopoverButton" type="button">고정 해제</button>
+                <button id="closePopoverButton" type="button" aria-label="번역창 닫기">×</button>
+              </div>
             </div>
             <p id="popoverSelection" class="popover-selection"></p>
             <div id="popoverBody" class="popover-body">번역 중...</div>
+          </aside>
+          <aside id="historyPanel" class="history-panel" aria-live="polite" hidden>
+            <div class="history-head">
+              <div>
+                <strong>검색 기록</strong>
+                <span>파일별 단어와 문장</span>
+              </div>
+              <button id="closeHistoryButton" type="button" aria-label="기록 닫기">×</button>
+            </div>
+            <label class="history-file-picker">
+              파일
+              <select id="historyFileSelect"></select>
+            </label>
+            <div class="history-content">
+              <section>
+                <h3>단어</h3>
+                <div id="wordHistoryList" class="history-list"></div>
+              </section>
+              <section>
+                <h3>문장</h3>
+                <div id="sentenceHistoryList" class="history-list"></div>
+              </section>
+            </div>
           </aside>
         </div>
       </section>

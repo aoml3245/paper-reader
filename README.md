@@ -11,6 +11,7 @@ The app is built with Electron, PDF.js, a small Node HTTP server, and Ollama.
 - Render PDF pages with selectable word tokens
 - Double-click a word to translate that word
 - Double-click the same selected word again to select its sentence
+- Hold Shift while selecting to append more words from the same sentence
 - Drag selection is limited to one sentence
 - Show translation results near the selected text
 - Cancel older translation requests when a new selection starts

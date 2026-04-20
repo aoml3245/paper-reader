@@ -12,6 +12,25 @@ function getRecentFilesPath() {
   return path.join(app.getPath("userData"), "recent-files.json");
 }
 
+function getSettingsPath() {
+  return path.join(app.getPath("userData"), "settings.json");
+}
+
+function readSettings() {
+  try {
+    const raw = fs.readFileSync(getSettingsPath(), "utf8");
+    const settings = JSON.parse(raw);
+
+    return settings && typeof settings === "object" ? settings : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSettings(settings) {
+  fs.writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2));
+}
+
 function readRecentFiles() {
   try {
     const raw = fs.readFileSync(getRecentFilesPath(), "utf8");
@@ -53,6 +72,32 @@ function readPdfPayload(filePath) {
 
 function registerIpcHandlers() {
   ipcMain.handle("recent-files:list", () => readRecentFiles());
+
+  ipcMain.handle("settings:get-zoom", () => {
+    const settings = readSettings();
+
+    return typeof settings.zoom === "string" ? settings.zoom : null;
+  });
+
+  ipcMain.handle("settings:set-zoom", (_event, zoom) => {
+    const settings = readSettings();
+
+    settings.zoom = String(zoom);
+    writeSettings(settings);
+  });
+
+  ipcMain.handle("history:get", () => {
+    const settings = readSettings();
+
+    return settings.history && typeof settings.history === "object" ? settings.history : {};
+  });
+
+  ipcMain.handle("history:set", (_event, history) => {
+    const settings = readSettings();
+
+    settings.history = history && typeof history === "object" ? history : {};
+    writeSettings(settings);
+  });
 
   ipcMain.handle("recent-files:open", (_event, filePath) => {
     if (!filePath || !fs.existsSync(filePath)) {

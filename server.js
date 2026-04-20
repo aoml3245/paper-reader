@@ -137,9 +137,8 @@ Guidelines:
 5. Answer in Korean only.
 
 Output format:
-- 뜻: ...
-- 문맥상 의미: ...
-- 짧은 해석: ...`;
+해석: {only_selectedText_translation}
+부연설명: {extra_explanation_if_needed}`;
   }
 
   return `You are a professional translator and reading assistant.
@@ -163,8 +162,8 @@ Guidelines:
 5. Answer in Korean only.
 
 Output format:
-- 해석: ...
-- 쉽게 설명하면: ...`;
+해석: {only_selectedText_translation}
+부연설명: {extra_explanation_if_needed}`;
 }
 
 async function requestOllama(prompt, signal) {
