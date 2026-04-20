@@ -18,6 +18,7 @@ const goPageButton = document.querySelector("#goPageButton");
 const zoomSelect = document.querySelector("#zoomSelect");
 const translationPopover = document.querySelector("#translationPopover");
 const popoverHead = translationPopover.querySelector(".popover-head");
+const popoverFontSizeSelect = document.querySelector("#popoverFontSizeSelect");
 const unpinPopoverButton = document.querySelector("#unpinPopoverButton");
 const closePopoverButton = document.querySelector("#closePopoverButton");
 const popoverSelection = document.querySelector("#popoverSelection");
@@ -32,6 +33,7 @@ const sentenceHistoryList = document.querySelector("#sentenceHistoryList");
 
 const pdfjs = window.pdfjsLib;
 const zoomStorageKey = "paperReader.zoom";
+const popoverFontSizeStorageKey = "paperReader.popoverFontSize";
 const historyStorageKey = "paperReader.history";
 const nativeApi = window.paperReaderNative;
 
@@ -62,6 +64,7 @@ let isPopoverPinned = false;
 let currentHistoryFileKey = "";
 
 restoreZoom();
+restorePopoverFontSize();
 loadNativeHistory();
 loadRecentFiles();
 syncToolbarHeight();
@@ -274,6 +277,25 @@ function showPopoverForWords(words, selectionText) {
   requestAnimationFrame(() => positionPopover(words));
 }
 
+function setPinnedPopoverPreview(groups, { force = false } = {}) {
+  if (!isPopoverPinned) return;
+
+  const previewText = getGroupsText(groups);
+
+  if (!previewText) return;
+
+  if (
+    !force &&
+    popoverSelection.textContent === previewText &&
+    translationPopover.dataset.state === "loading"
+  ) {
+    return;
+  }
+
+  setPopoverState(previewText, "번역 중...", "loading");
+  translationPopover.classList.add("is-visible");
+}
+
 function hidePopover({ force = false } = {}) {
   if (isPopoverPinned && !force) return;
 
@@ -409,8 +431,36 @@ function normalizeTranslationLabel(label) {
   return label;
 }
 
+function restorePopoverFontSize() {
+  const savedFontSize = localStorage.getItem(popoverFontSizeStorageKey);
+  const fallbackFontSize = popoverFontSizeSelect.value || "14";
+  const fontSize = getPopoverFontSizeValues().includes(savedFontSize)
+    ? savedFontSize
+    : fallbackFontSize;
+
+  applyPopoverFontSize(fontSize);
+}
+
+function persistPopoverFontSize() {
+  applyPopoverFontSize(popoverFontSizeSelect.value);
+  localStorage.setItem(popoverFontSizeStorageKey, popoverFontSizeSelect.value);
+}
+
+function applyPopoverFontSize(fontSize) {
+  const normalizedFontSize = getPopoverFontSizeValues().includes(String(fontSize))
+    ? String(fontSize)
+    : "14";
+
+  popoverFontSizeSelect.value = normalizedFontSize;
+  translationPopover.style.setProperty("--popover-font-size", `${normalizedFontSize}px`);
+}
+
+function getPopoverFontSizeValues() {
+  return Array.from(popoverFontSizeSelect.options).map((option) => option.value);
+}
+
 function startPopoverDrag(event) {
-  if (event.button !== 0 || event.target.closest("button")) return;
+  if (event.button !== 0 || event.target.closest("button, select, label")) return;
 
   const popoverRect = translationPopover.getBoundingClientRect();
   const frameRect = viewerFrame.getBoundingClientRect();
@@ -577,6 +627,10 @@ function startDragSelection(event, word, isExtending) {
     isExtending,
     moved: false,
   };
+
+  const initialGroups = isExtending ? [...dragSelection.baseGroups, [word]] : [[word]];
+
+  setPinnedPopoverPreview(initialGroups, { force: true });
 }
 
 function updateDragSelection(event) {
@@ -690,7 +744,10 @@ function splitSentences(text) {
 }
 
 function normalizeText(text) {
-  return String(text || "").trim().replace(/\s+/g, " ");
+  return String(text || "")
+    .trim()
+    .replace(/([A-Za-z])[-‐‑‒–—]\s+([a-z])/g, "$1$2")
+    .replace(/\s+/g, " ");
 }
 
 function findSelectionContext(selection) {
@@ -1182,31 +1239,24 @@ function captureSelection(event) {
 function selectSingleWord(word) {
   if (!word) return;
 
-  const text = word.dataset.word || word.textContent.trim();
-
-  if (!text) return;
-
-  selectWordGroup([word], text);
+  selectWordGroup([word]);
 }
 
 function selectSentenceForWord(word) {
   const sentenceWords = getSentenceWords(word);
-  const text = getWordsText(sentenceWords);
-
-  if (!text) return;
-
-  selectWordGroup(sentenceWords, text);
+  selectWordGroup(sentenceWords);
 }
 
 function selectWordGroup(words, text = getWordsText(words)) {
   selectWordGroups([words], text);
 }
 
-function selectWordGroups(groups, text = getGroupsText(groups)) {
+function selectWordGroups(groups, text) {
   const normalizedGroups = normalizeWordGroups(groups);
   const flattenedWords = flattenWordGroups(normalizedGroups);
+  const selectionText = getGroupsText(normalizedGroups) || text;
 
-  if (!flattenedWords.length || !text) return;
+  if (!flattenedWords.length || !selectionText) return;
 
   activeTranslationId += 1;
   clearWordMarkers();
@@ -1216,9 +1266,9 @@ function selectWordGroups(groups, text = getGroupsText(groups)) {
   renderSelectionHighlights(selectedWordGroups);
   lastSingleWordElement = flattenedWords.length === 1 ? flattenedWords[0] : null;
   window.getSelection()?.removeAllRanges();
-  lastSelection = text;
-  showPopoverForWords(flattenedWords, text);
-  requestTranslation(text);
+  lastSelection = selectionText;
+  showPopoverForWords(flattenedWords, selectionText);
+  requestTranslation(selectionText);
 }
 
 function renderSelectionHighlights(groups) {
@@ -1292,10 +1342,7 @@ function applySelectionPreview(groups) {
   selectedWordElements.forEach((word) => word.classList.add("is-selected"));
   renderSelectionHighlights(selectedWordGroups);
 
-  if (isPopoverPinned && previewText) {
-    popoverSelection.textContent = previewText;
-    translationPopover.classList.add("is-visible");
-  }
+  setPinnedPopoverPreview(normalizedGroups);
 }
 
 function groupHighlightBoxes(boxes) {
@@ -1323,7 +1370,25 @@ function groupHighlightBoxes(boxes) {
 }
 
 function getWordsText(words) {
-  return words.map((word) => word.dataset.word).join(" ").trim();
+  const sortedWords = Array.from(new Set(words)).sort((a, b) => getTokenIndex(a) - getTokenIndex(b));
+  let text = "";
+  let previousWordText = "";
+
+  sortedWords.forEach((word) => {
+    const wordText = getWordText(word);
+
+    if (!wordText) return;
+
+    if (text && shouldJoinHyphenatedFragments(previousWordText, wordText)) {
+      text = text.replace(/[-‐‑‒–—]$/, "") + wordText;
+    } else {
+      text += `${text ? " " : ""}${wordText}`;
+    }
+
+    previousWordText = wordText;
+  });
+
+  return text.trim();
 }
 
 function getGroupsText(groups) {
@@ -1336,9 +1401,7 @@ function cloneWordGroups(groups) {
 
 function normalizeWordGroups(groups) {
   return groups
-    .map((group) =>
-      Array.from(new Set(group)).sort((a, b) => getTokenIndex(a) - getTokenIndex(b)),
-    )
+    .map((group) => expandHyphenatedWordGroup(group))
     .filter((group) => group.length)
     .sort((a, b) => getTokenIndex(a[0]) - getTokenIndex(b[0]));
 }
@@ -1351,6 +1414,52 @@ function flattenWordGroups(groups) {
 
 function getTokenIndex(word) {
   return Number(word.dataset.tokenIndex || 0);
+}
+
+function expandHyphenatedWordGroup(words) {
+  const expandedWords = new Set(words);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    Array.from(expandedWords).forEach((word) => {
+      const previousWord = getWordByTokenIndex(getTokenIndex(word) - 1);
+      const nextWord = getWordByTokenIndex(getTokenIndex(word) + 1);
+
+      if (
+        previousWord &&
+        shouldJoinHyphenatedFragments(getWordText(previousWord), getWordText(word)) &&
+        !expandedWords.has(previousWord)
+      ) {
+        expandedWords.add(previousWord);
+        changed = true;
+      }
+
+      if (
+        nextWord &&
+        shouldJoinHyphenatedFragments(getWordText(word), getWordText(nextWord)) &&
+        !expandedWords.has(nextWord)
+      ) {
+        expandedWords.add(nextWord);
+        changed = true;
+      }
+    });
+  }
+
+  return Array.from(expandedWords).sort((a, b) => getTokenIndex(a) - getTokenIndex(b));
+}
+
+function getWordByTokenIndex(tokenIndex) {
+  return getAllWordTokens().find((word) => getTokenIndex(word) === tokenIndex) || null;
+}
+
+function getWordText(word) {
+  return String(word?.dataset.word || word?.textContent || "").trim();
+}
+
+function shouldJoinHyphenatedFragments(leftText, rightText) {
+  return /[A-Za-z][-‐‑‒–—]$/.test(leftText || "") && /^[a-z]/.test(rightText || "");
 }
 
 function mergeWordGroups(currentWords, newWords) {
@@ -1494,6 +1603,7 @@ pageInput.addEventListener("keydown", (event) => {
 
 closePopoverButton.addEventListener("click", closePopover);
 unpinPopoverButton.addEventListener("click", unpinPopover);
+popoverFontSizeSelect.addEventListener("change", persistPopoverFontSize);
 docInfoButton.addEventListener("click", toggleDocInfo);
 popoverHead.addEventListener("pointerdown", startPopoverDrag);
 popoverHead.addEventListener("pointermove", updatePopoverDrag);

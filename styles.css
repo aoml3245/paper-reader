@@ -654,7 +654,7 @@ input[type="number"] {
   cursor: grabbing;
 }
 
-.popover-head span {
+.popover-head > span {
   font-size: 13px;
   font-weight: 800;
 }
@@ -663,6 +663,48 @@ input[type="number"] {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.popover-font-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  color: #ffffff;
+  background: rgb(255 255 255 / 14%);
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: default;
+  line-height: 1;
+}
+
+.popover-font-control span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.popover-font-control select {
+  width: 42px;
+  height: 26px;
+  padding: 0;
+  color: #ffffff;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  outline: 0;
+  cursor: pointer;
+}
+
+.popover-font-control select:focus {
+  outline: 0;
+}
+
+.popover-font-control option {
+  color: #172026;
 }
 
 .popover-head button {
@@ -703,7 +745,7 @@ input[type="number"] {
   color: #355057;
   background: #f1f7f6;
   border-bottom: 1px solid #d7e7e4;
-  font-size: 13px;
+  font-size: max(13px, calc(var(--popover-font-size, 14px) - 1px));
   font-weight: 700;
   line-height: 1.45;
   overflow: auto;
@@ -716,7 +758,7 @@ input[type="number"] {
   overflow: auto;
   padding: 14px;
   color: #172026;
-  font-size: 14px;
+  font-size: var(--popover-font-size, 14px);
   line-height: 1.55;
   white-space: pre-wrap;
 }
@@ -740,7 +782,7 @@ input[type="number"] {
 .translation-section h3 {
   margin: 0;
   color: #0f625d;
-  font-size: 12px;
+  font-size: max(12px, calc(var(--popover-font-size, 14px) - 2px));
   font-weight: 800;
 }
 
