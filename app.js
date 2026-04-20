@@ -274,8 +274,15 @@ function showPopoverForWords(words, selectionText) {
   requestAnimationFrame(() => positionPopover(words));
 }
 
-function hidePopover() {
+function hidePopover({ force = false } = {}) {
+  if (isPopoverPinned && !force) return;
+
   translationPopover.classList.remove("is-visible");
+}
+
+function closePopover() {
+  setPopoverPinned(false);
+  hidePopover({ force: true });
 }
 
 function setPopoverPinned(isPinned) {
@@ -1008,6 +1015,7 @@ function clearViewer(resetInput = true) {
   currentFileSize = 0;
   documentText = "";
   lastSelection = "";
+  setPopoverPinned(false);
   clearWordMarkers();
   clearPages();
   if (resetInput) {
@@ -1022,7 +1030,6 @@ function clearViewer(resetInput = true) {
   viewState.textContent = "대기 중";
   pageInput.value = "1";
   pageInput.removeAttribute("max");
-  setPopoverPinned(false);
   restoreZoom();
   viewerFrame.classList.remove("has-file");
   setControlsEnabled(false);
@@ -1277,12 +1284,18 @@ function renderSelectionGroupHighlight(words) {
 function applySelectionPreview(groups) {
   const normalizedGroups = normalizeWordGroups(groups);
   const flattenedWords = flattenWordGroups(normalizedGroups);
+  const previewText = getGroupsText(normalizedGroups);
 
   selectedWordElements.forEach((word) => word.classList.remove("is-selected"));
   selectedWordGroups = normalizedGroups;
   selectedWordElements = flattenedWords;
   selectedWordElements.forEach((word) => word.classList.add("is-selected"));
   renderSelectionHighlights(selectedWordGroups);
+
+  if (isPopoverPinned && previewText) {
+    popoverSelection.textContent = previewText;
+    translationPopover.classList.add("is-visible");
+  }
 }
 
 function groupHighlightBoxes(boxes) {
@@ -1479,7 +1492,7 @@ pageInput.addEventListener("keydown", (event) => {
   }
 });
 
-closePopoverButton.addEventListener("click", hidePopover);
+closePopoverButton.addEventListener("click", closePopover);
 unpinPopoverButton.addEventListener("click", unpinPopover);
 docInfoButton.addEventListener("click", toggleDocInfo);
 popoverHead.addEventListener("pointerdown", startPopoverDrag);
