@@ -1,0 +1,8 @@
+node_modules/
+release/
+dist/
+build/tmp/
+build/*.iconset/
+*.blockmap
+*.log
+.DS_Store

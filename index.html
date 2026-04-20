@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Paper Reader</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="reader">
+        <header class="toolbar" aria-label="PDF 보기 도구">
+          <div class="toolbar-left">
+            <div class="brand">
+              <span class="brand-mark" aria-hidden="true">P</span>
+              <div>
+                <h1>Paper Reader</h1>
+                <p>PDF 논문을 바로 열어 읽습니다.</p>
+              </div>
+            </div>
+            <div class="toolbar-group file-actions">
+              <button id="openButton" type="button">파일 열기</button>
+              <button id="clearButton" type="button" disabled>닫기</button>
+            </div>
+          </div>
+
+          <div class="toolbar-center">
+            <button
+              id="docInfoButton"
+              class="doc-title-button"
+              type="button"
+              aria-expanded="false"
+              aria-controls="docInfoPopover"
+              disabled
+            >
+              <span id="docTitle" class="doc-title">문서 없음</span>
+              <span class="doc-caret" aria-hidden="true"></span>
+            </button>
+            <div id="docInfoPopover" class="doc-info-popover" aria-live="polite">
+              <dl>
+                <div>
+                  <dt>파일</dt>
+                  <dd id="fileName">아직 열지 않음</dd>
+                </div>
+                <div>
+                  <dt>크기</dt>
+                  <dd id="fileSize">-</dd>
+                </div>
+                <div>
+                  <dt>보기</dt>
+                  <dd id="viewState">대기 중</dd>
+                </div>
+                <div>
+                  <dt>페이지</dt>
+                  <dd id="pageCount">-</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          <div class="toolbar-right">
+            <div class="toolbar-group">
+              <label for="zoomSelect">확대</label>
+              <select id="zoomSelect" disabled>
+                <option value="75">75%</option>
+                <option value="100" selected>100%</option>
+                <option value="125">125%</option>
+                <option value="150">150%</option>
+                <option value="200">200%</option>
+                <option value="250">250%</option>
+                <option value="300">300%</option>
+                <option value="400">400%</option>
+                <option value="500">500%</option>
+              </select>
+            </div>
+            <div class="toolbar-group">
+              <label for="pageInput">페이지</label>
+              <input id="pageInput" type="number" min="1" value="1" disabled />
+              <button id="goPageButton" type="button" disabled>이동</button>
+            </div>
+          </div>
+        </header>
+        <input id="fileInput" class="file-input" type="file" accept="application/pdf,.pdf" />
+
+        <div class="viewer-frame" id="viewerFrame">
+          <div class="empty-state" id="emptyState">
+            <p class="eyebrow">PDF Viewer</p>
+            <h2>논문 PDF를 선택하세요.</h2>
+            <p>선택한 텍스트만 번역 API로 전송합니다.</p>
+            <label class="drop-zone" id="dropZone" for="fileInput">
+              <span class="drop-icon" aria-hidden="true">PDF</span>
+              <strong>PDF 선택</strong>
+              <span>또는 여기에 끌어다 놓기</span>
+            </label>
+            <section id="recentFilesPanel" class="recent-files-panel" hidden>
+              <h3>최근에 연 PDF</h3>
+              <div id="recentFilesList" class="recent-files-list"></div>
+            </section>
+          </div>
+          <div id="pdfPages" class="pdf-pages" aria-label="PDF 페이지"></div>
+          <aside id="translationPopover" class="translation-popover" aria-live="polite">
+            <div class="popover-head">
+              <span>번역</span>
+              <button id="closePopoverButton" type="button" aria-label="번역창 닫기">×</button>
+            </div>
+            <p id="popoverSelection" class="popover-selection"></p>
+            <div id="popoverBody" class="popover-body">번역 중...</div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
