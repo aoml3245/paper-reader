@@ -8,6 +8,50 @@
   </head>
   <body>
     <main class="app-shell">
+      <aside class="library-panel" aria-label="논문 라이브러리">
+        <div class="library-head">
+          <div>
+            <h2>Library</h2>
+            <p id="libraryStats">폴더를 열어 인덱싱하세요.</p>
+          </div>
+          <button id="scanFolderButton" type="button">폴더 열기</button>
+        </div>
+        <div class="library-search-row">
+          <input id="librarySearchInput" type="search" placeholder="제목, 태그, arXiv 검색" />
+          <button id="rescanFolderButton" type="button" title="최근 폴더 다시 스캔">↻</button>
+        </div>
+        <div class="library-filter-row">
+          <select id="librarySortSelect" aria-label="논문 정렬">
+            <option value="recent">최근 열람순</option>
+            <option value="published-desc">최근 출판순</option>
+            <option value="published-asc">오래된 출판순</option>
+            <option value="added-desc">최근 추가순</option>
+            <option value="title">제목순</option>
+          </select>
+          <select id="publicationPeriodSelect" aria-label="출판 기간 필터">
+            <option value="all">전체 기간</option>
+            <option value="1y">최근 1년</option>
+            <option value="3y">최근 3년</option>
+            <option value="5y">최근 5년</option>
+            <option value="unknown">출판일 미확인</option>
+          </select>
+        </div>
+        <div id="libraryProgress" class="library-progress" hidden>
+          <div class="library-progress-main">
+            <div class="library-progress-track">
+              <div id="libraryProgressBar" class="library-progress-bar"></div>
+            </div>
+            <button id="workQueueButton" type="button">작업</button>
+          </div>
+          <span id="libraryProgressText">준비 중</span>
+          <div id="workQueuePanel" class="work-queue-panel" hidden>
+            <strong>작업 현황</strong>
+            <div id="workQueueList" class="work-queue-list"></div>
+          </div>
+        </div>
+        <div id="tagFilterList" class="tag-filter-list" aria-label="태그 필터"></div>
+        <div id="paperList" class="paper-list" aria-live="polite"></div>
+      </aside>
       <section class="reader">
         <header class="toolbar" aria-label="PDF 보기 도구">
           <div class="toolbar-left">
@@ -22,6 +66,8 @@
               <button id="openButton" type="button">파일 열기</button>
               <button id="clearButton" type="button" disabled>닫기</button>
               <button id="historyButton" type="button">기록</button>
+              <button id="graphButton" type="button">그래프</button>
+              <button id="refsButton" type="button">Refs</button>
             </div>
           </div>
 
@@ -87,7 +133,7 @@
           <div class="empty-state" id="emptyState">
             <p class="eyebrow">PDF Viewer</p>
             <h2>논문 PDF를 선택하세요.</h2>
-            <p>선택한 텍스트만 번역 API로 전송합니다.</p>
+            <p>왼쪽에서 졸업 폴더를 인덱싱하거나 PDF를 직접 열 수 있습니다.</p>
             <label class="drop-zone" id="dropZone" for="fileInput">
               <span class="drop-icon" aria-hidden="true">PDF</span>
               <strong>PDF 선택</strong>
@@ -99,10 +145,53 @@
             </section>
           </div>
           <div id="pdfPages" class="pdf-pages" aria-label="PDF 페이지"></div>
+          <aside id="graphPanel" class="graph-panel" aria-live="polite" hidden>
+            <div class="side-panel-head">
+              <div>
+                <strong>논문 관계 그래프</strong>
+                <span>태그와 폴더 맥락 기반</span>
+              </div>
+              <button id="closeGraphButton" type="button" aria-label="그래프 닫기">×</button>
+            </div>
+            <div class="graph-controls">
+              <label>
+                보기
+                <select id="graphViewSelect">
+                  <option value="graph">3D 그래프</option>
+                  <option value="list">리스트</option>
+                  <option value="both">그래프 + 리스트</option>
+                </select>
+              </label>
+              <label>
+                지표
+                <select id="graphMetricSelect">
+                  <option value="importance">중요도</option>
+                  <option value="connections">연결수</option>
+                  <option value="references">Reference 후보</option>
+                  <option value="summary">요약 상태</option>
+                </select>
+              </label>
+            </div>
+            <canvas id="paperGraph" class="paper-graph" role="img" aria-label="3D 논문 관계 그래프"></canvas>
+            <div id="graphList" class="graph-list" hidden></div>
+          </aside>
+          <aside id="referencesPanel" class="references-panel" aria-live="polite" hidden>
+            <div class="side-panel-head">
+              <div>
+                <strong>References</strong>
+                <span id="referencesMeta">열린 논문 기준</span>
+              </div>
+              <button id="closeRefsButton" type="button" aria-label="참고문헌 닫기">×</button>
+            </div>
+            <div id="referencesList" class="references-list"></div>
+          </aside>
           <aside id="translationPopover" class="translation-popover" aria-live="polite">
             <div class="popover-head">
-              <span>번역</span>
+              <span>로컬 LLM</span>
               <div class="popover-actions">
+                <button class="assist-mode-button" type="button" data-assist-mode="translate">해석</button>
+                <button class="assist-mode-button" type="button" data-assist-mode="explain">설명</button>
+                <button class="assist-mode-button" type="button" data-assist-mode="related">관련</button>
                 <label class="popover-font-control" for="popoverFontSizeSelect">
                   <span>글자</span>
                   <select id="popoverFontSizeSelect" aria-label="번역 메모 글자 크기">
