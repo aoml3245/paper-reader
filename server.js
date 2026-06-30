@@ -102,6 +102,63 @@ async function handleTranslate(request, response) {
   }
 }
 
+async function handleAssist(request, response) {
+  const abortController = new AbortController();
+  let requestCompleted = false;
+
+  request.on("aborted", () => {
+    abortController.abort();
+  });
+
+  response.on("close", () => {
+    if (!requestCompleted) {
+      abortController.abort();
+    }
+  });
+
+  try {
+    const body = await readRequestBody(request);
+    if (abortController.signal.aborted) return;
+
+    const payload = JSON.parse(body || "{}");
+    const mode = String(payload.mode || "explain");
+    const text = normalizeWhitespace(payload.text || "");
+    const paperTitle = normalizeWhitespace(payload.paperTitle || "");
+    const context = {
+      previousSentence: normalizeWhitespace(payload.previousSentence || ""),
+      currentSentence: normalizeWhitespace(payload.currentSentence || ""),
+      nextSentence: normalizeWhitespace(payload.nextSentence || ""),
+    };
+
+    if (!text) {
+      sendJson(response, 400, { error: "text is required" });
+      return;
+    }
+
+    const prompt = buildAssistPrompt({ mode, text, paperTitle, context });
+    const answer = await requestOllama(prompt, abortController.signal);
+
+    if (abortController.signal.aborted) return;
+
+    requestCompleted = true;
+    sendJson(response, 200, {
+      mode,
+      sourceText: text,
+      answer,
+      model: ollamaModel,
+    });
+  } catch (error) {
+    if (error.name === "AbortError" || abortController.signal.aborted) {
+      return;
+    }
+
+    requestCompleted = true;
+    if (!response.writableEnded) {
+      sendJson(response, 500, { error: error.message });
+    }
+  }
+}
+
 function normalizeWhitespace(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
 }
@@ -258,6 +315,88 @@ Output format:
 부연설명: {extra_explanation_if_needed}`;
 }
 
+function buildAssistPrompt({ mode, text, paperTitle, context }) {
+  const sharedInput = `Paper title: ${paperTitle || "(unknown)"}
+
+<selected_text>
+${text}
+</selected_text>
+
+<context>
+previous_sentence: ${context.previousSentence}
+current_sentence: ${context.currentSentence}
+next_sentence: ${context.nextSentence}
+</context>`;
+
+  if (mode === "related") {
+    return `You are a Korean-speaking research assistant for robotics and machine learning papers.
+
+Task:
+From the selected passage, infer what prior work or related paper topics the reader should look up next.
+
+Rules:
+- Answer in Korean.
+- Do not invent exact paper titles unless the passage clearly names them.
+- Prefer search keywords, canonical methods, author/model names, and arXiv-style clues if present.
+- Keep it concise and useful for literature navigation.
+
+Input:
+${sharedInput}
+
+Output format:
+핵심 주제: {one short phrase}
+찾아볼 키워드: {comma-separated keywords}
+관련 흐름: {2-4 short bullet-like sentences}
+왜 중요한가: {one sentence}`;
+  }
+
+  if (mode === "summary") {
+    return `You are a Korean-speaking research assistant.
+
+Task:
+Summarize the selected paper text or reference text for fast preview.
+
+Rules:
+- Answer in Korean.
+- Be concrete about method, problem, contribution, and why the reader might care.
+- If the input is only a citation, say what can and cannot be inferred.
+- Extract 5-8 concise topic tags from the paper content.
+- Tags must reflect research topic, method, benchmark, domain, or model family.
+- Do not use file names, folder names, generic words, or broad labels like "paper" or "research".
+
+Input:
+${sharedInput}
+
+Output format:
+한줄 요약: {one sentence}
+키워드 태그: {tag 1}, {tag 2}, {tag 3}, {tag 4}, {tag 5}
+핵심 내용:
+- {point 1}
+- {point 2}
+- {point 3}
+읽을 이유: {one sentence}`;
+  }
+
+  return `You are a Korean-speaking research assistant for academic papers.
+
+Task:
+Explain the selected passage so that a graduate student can continue reading the paper.
+
+Rules:
+- Answer in Korean.
+- Preserve technical meaning.
+- Explain symbols or jargon when useful.
+- Do not translate surrounding context; use it only to clarify the selected text.
+
+Input:
+${sharedInput}
+
+Output format:
+쉽게 말하면: {plain Korean explanation}
+기술적 의미: {precise interpretation}
+읽을 때 포인트: {one practical reading note}`;
+}
+
 async function requestOllama(prompt, signal) {
   const ollamaResponse = await fetch(`${ollamaHost}/api/generate`, {
     method: "POST",
@@ -318,6 +457,11 @@ function createServer() {
   return http.createServer((request, response) => {
     if (request.method === "POST" && request.url === "/api/translate") {
       handleTranslate(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && request.url === "/api/assist") {
+      handleAssist(request, response);
       return;
     }
 
